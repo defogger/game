@@ -23,7 +23,7 @@ public class GameApplication extends Application {
             {
                 try
                 {
-                    Thread.sleep(20);
+                    Thread.sleep(200);
                 }
                 catch (Exception e) {}
                 Platform.runLater(() -> {

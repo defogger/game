@@ -3,11 +3,14 @@ package patryk.game.MasterOfGame;
 import javafx.util.Pair;
 import patryk.game.MasterOfGame.Unit.Unit;
 
+import java.util.Vector;
+
 public class Map
 {
     private Integer sizeX;
     private Integer sizeY;
     public Area[][] areas;
+    static public Vector<Unit> enemy = new Vector<>();
     Map (Integer x,Integer y)
     {
         this.sizeX = x;

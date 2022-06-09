@@ -20,7 +20,7 @@ public class MasterOfGame
     }
     public MasterOfGame createMap()
     {
-        map = new Map(15,9);
+        map = new Map(16,16);
         return this;
     }
 

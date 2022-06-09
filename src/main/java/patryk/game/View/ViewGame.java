@@ -4,7 +4,6 @@ import javafx.event.EventHandler;
 import javafx.geometry.Rectangle2D;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
-import javafx.scene.image.Image;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
@@ -12,9 +11,14 @@ import javafx.scene.input.ScrollEvent;
 import javafx.scene.paint.Color;
 import javafx.stage.Screen;
 import javafx.util.Pair;
+import patryk.game.MasterOfGame.Area;
+import patryk.game.MasterOfGame.Map;
 import patryk.game.MasterOfGame.MasterOfGame;
+import patryk.game.MasterOfGame.Player;
 import patryk.game.MasterOfGame.Unit.Unit;
-import java.io.File;
+
+import java.util.Random;
+import java.util.Vector;
 
 //klasa odpowiadająca za wyświetlanie przebiegu gry
 public class ViewGame
@@ -27,8 +31,11 @@ public class ViewGame
     private Integer radius = 50;
     private Pair<Double,Double> points[][];
 
-    private Double x = 100.0;
-    private Double y = 100.0;
+    private Double x = 80.0;
+    private Double y = 80.0;
+
+    private Double MauseX;
+    private Double MauseY;
     private Unit checkedUnit = null;
     static final double a = 2 * Math.PI / 6;
     public ViewGame()
@@ -59,57 +66,53 @@ public class ViewGame
             @Override
             public void handle(MouseEvent e) {
                 Pair<Integer,Integer> clicedField = whichAreaCliced(e);
-                System.out.println(clicedField.getKey()+" "+clicedField.getValue());
                 if(e.getButton() != MouseButton.SECONDARY)
                 {
-                    if(checkedUnit == null)
-                    {
-                        if(masterOfGame.getMap().getArea(clicedField).isBattle)
-                            return;
-                        if(masterOfGame.getMap().getUnit(clicedField) != null)
-                            checkedUnit = masterOfGame.getMap().getUnit(clicedField);
-                        System.out.println("zaznaczono");
+                    if(masterOfGame.getMap().getArea(clicedField).isBattle)
                         return;
+                    if(masterOfGame.getMap().getUnit(clicedField) != null )
+                        if(masterOfGame.getMap().getUnit(clicedField).getOwner().equals(new Player("player")))
+                            checkedUnit = masterOfGame.getMap().getUnit(clicedField);
+                    for(Unit u : Map.enemy)
+                    {
+                        Random random = new Random();
+                        u.setTarget(new Pair<>(Math.abs(random.nextInt())%15,Math.abs(random.nextInt())%15));
                     }
-                    checkedUnit.setTarget(clicedField);
-                    checkedUnit = null;
                 }
-                if(e.getButton() == MouseButton.SECONDARY)
-                {
-                    //funkcja tymczasowo dodaje jednostke po kliknięci prawym przyciskiem
-                    if(masterOfGame.getMap().getUnit(clicedField) == null)
-                        masterOfGame.getMap().areas[clicedField.getKey()][clicedField.getValue()].setUnit(100);
-                    else
-                        if(masterOfGame.getMap().getUnit(clicedField).owner.equals(masterOfGame.eneny))
-                            masterOfGame.getMap().getUnit(clicedField).owner = masterOfGame.player;
-                        else
-                            masterOfGame.getMap().getUnit(clicedField).owner = masterOfGame.eneny;
-                }
+                else if(e.getButton() == MouseButton.SECONDARY)
+                    if(checkedUnit != null)
+                        checkedUnit.setTarget(clicedField);
             }
         };
         canvas.addEventFilter(MouseEvent.MOUSE_CLICKED,mouseEvent);
 
-        //do poprawy
-        EventHandler<KeyEvent> keyEvent = new EventHandler<KeyEvent>() {
+        EventHandler<MouseEvent> mousePressed = new EventHandler<MouseEvent>() {
             @Override
-            public void handle(KeyEvent keyEvent) {
-                System.out.println(keyEvent.getCode());
+            public void handle(MouseEvent e) {
+                if(e.getButton() != MouseButton.SECONDARY)
+                {
+                    MauseX = e.getX();
+                    MauseY = e.getY();
+                }
             }
         };
+        canvas.addEventFilter(MouseEvent.MOUSE_PRESSED,mousePressed);
 
-        canvas.addEventFilter(KeyEvent.KEY_TYPED,keyEvent);
-        canvas.setVisible(true);
-
-        EventHandler<ScrollEvent> scrollEvent = new EventHandler<ScrollEvent>() {
+        EventHandler<MouseEvent> mouseDragged = new EventHandler<MouseEvent>() {
             @Override
-            public void handle(ScrollEvent scrollEvent) {
-                Integer delta = (int) scrollEvent.getDeltaY();
-                //do poprawy
-                /*if(radius + delta > 20 && radius + delta < 100)
-                    radius += delta;*/
+            public void handle(MouseEvent e) {
+                if(e.getButton() != MouseButton.SECONDARY)
+                {
+                    if(x - MauseX + e.getX() > -1000 && x - MauseX + e.getX() < 200)
+                        x -= MauseX - e.getX();
+                    if(y - MauseY + e.getY() > -1000 && y - MauseY + e.getY() < 200)
+                        y -= MauseY - e.getY();
+                    MauseX = e.getX();
+                    MauseY = e.getY();
+                }
             }
         };
-        canvas.addEventFilter(ScrollEvent.SCROLL,scrollEvent);
+        canvas.addEventFilter(MouseEvent.MOUSE_DRAGGED,mouseDragged);
     }
 
     private Pair<Integer,Integer> whichAreaCliced(MouseEvent e)
@@ -181,35 +184,28 @@ public class ViewGame
             Unit secondUnit = masterOfGame.getMap().getSecondUnit(positionOfArea);
 
             //rysuje pierwszą jednostke
-            String imgUrl = "sword";
-            File file = new File("img/"+imgUrl+".jpg");
-            Image img = new Image(file.toURI().toString(),imgsize,imgsize,false,false);
-            gc.drawImage(img,centerOfArea.getValue()-imgsize/2 + radius * 0.35,centerOfArea.getKey()-imgsize/2);
+            gc.drawImage(unit.getImg(imgsize),centerOfArea.getValue()-imgsize/2 + radius * 0.35,centerOfArea.getKey()-imgsize/2);
 
             //rysuje drugą jednostke
-            imgUrl = "sword";
-            file = new File("img/"+imgUrl+".jpg");
-            img = new Image(file.toURI().toString(),imgsize,imgsize,false,false);
-            gc.drawImage(img,centerOfArea.getValue()-imgsize/2 - radius * 0.35,centerOfArea.getKey()-imgsize/2);
+            gc.drawImage(secondUnit.getImg(imgsize),centerOfArea.getValue()-imgsize/2 - radius * 0.35,centerOfArea.getKey()-imgsize/2);
 
+            gc.setFill(Color.BLACK);
             gc.fillText(unit.getSize().toString(), centerOfArea.getValue() + (radius*0.1), centerOfArea.getKey()+(radius*2/3));
             gc.fillText(secondUnit.getSize().toString(), centerOfArea.getValue() - (radius*0.5), centerOfArea.getKey()+(radius*2/3));
 
             gc.setFill(Color.RED);
             gc.fillText("- " + unit.getLastHit().toString(), centerOfArea.getValue() + (radius*0.2), centerOfArea.getKey());
             gc.fillText("- " + secondUnit.getLastHit().toString(), centerOfArea.getValue() - (radius*0.6), centerOfArea.getKey());
-            gc.setFill(Color.BLACK);
 
             drawFlag(unit,centerOfArea,radius * 0.2);
             drawFlag(secondUnit,centerOfArea,radius * -0.2);
         }
         else if(unit != null)
         {
-            //do poprawy
-            String imgUrl = "sword";
-            File file = new File("img/"+imgUrl+".jpg");
-            Image img = new Image(file.toURI().toString(),imgsize,imgsize,false,false);
-            gc.drawImage(img,centerOfArea.getValue()-imgsize/2,centerOfArea.getKey()-imgsize/2);
+            gc.drawImage(unit.getImg(imgsize),centerOfArea.getValue()-imgsize/2,centerOfArea.getKey()-imgsize/2);
+            gc.setFill(Color.BLACK);
+            if(unit.equals(checkedUnit))
+                gc.strokeOval(centerOfArea.getValue()-imgsize/2,centerOfArea.getKey()-imgsize/2,imgsize-1,imgsize-1);
             gc.fillText(unit.getSize().toString(), centerOfArea.getValue()-(radius*0.2), centerOfArea.getKey()+(radius*2/3));
 
             drawFlag(unit,centerOfArea);
@@ -225,11 +221,10 @@ public class ViewGame
         gc.beginPath();
         gc.rect(centerOfArea.getValue() - radius*0.1,centerOfArea.getKey()-radius*0.5,radius*0.2,radius*0.2);
         if(unit.getOwner().equals(masterOfGame.getPlayer()))
-            gc.setFill(Color.LIGHTGREEN);
+            gc.setFill(Color.BLUE);
         else
             gc.setFill(Color.RED);
         gc.fill();
-        gc.setFill(Color.BLACK);
     }
 
     private void drawFlag(Unit unit,Pair<Double,Double> centerOfArea,Double x)
@@ -240,11 +235,10 @@ public class ViewGame
         gc.beginPath();
         gc.rect(centerOfArea.getValue() - radius*0.1 + x,centerOfArea.getKey()-radius*0.5,radius*0.2,radius*0.2);
         if(unit.getOwner().equals(masterOfGame.getPlayer()))
-            gc.setFill(Color.LIGHTGREEN);
+            gc.setFill(Color.BLUE);
         else
             gc.setFill(Color.RED);
         gc.fill();
-        gc.setFill(Color.BLACK);
     }
 
     private void drawHexagon(Pair<Integer,Integer> positionOfArea)
@@ -254,6 +248,9 @@ public class ViewGame
         Double newX,newY;
         y-=radius;
 
+        double x1[] = new double[6];
+        double y1[] = new double[6];
+
         for(int i=-1;i<5;i++)
         {
             newX = x + radius * Math.sin(a*i);
@@ -261,7 +258,17 @@ public class ViewGame
             gc.strokeLine(x, y, newX, newY);
             x = newX;
             y = newY;
+            x1[i+1] = x;
+            y1[i+1] = y;
         }
+
+        if(masterOfGame.getMap().getArea(positionOfArea).getType().equals(Area.Type.MEADOW))
+            gc.setFill(Color.PALEGREEN);
+        else if(masterOfGame.getMap().getArea(positionOfArea).getType().equals(Area.Type.HILL))
+            gc.setFill(Color.GOLD);
+        else
+            gc.setFill(Color.PERU);
+        gc.fillPolygon(x1, y1, 6);
     }
 
     private void drawVector(Pair<Integer,Integer> from,Pair<Integer,Integer> to)

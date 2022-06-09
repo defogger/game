@@ -1,15 +1,20 @@
 package patryk.game.MasterOfGame;
 
 import javafx.util.Pair;
-import patryk.game.MasterOfGame.Unit.Sword;
 import patryk.game.MasterOfGame.Unit.Unit;
 
+import java.util.Random;
 import java.util.Vector;
 
 //nazwa klasy Field była już zajęta
 public class Area
 {
     Pair<Integer,Integer> position;
+    public enum Type {
+        MEADOW,HILL,MOUNTAIN;
+    }
+    Type type;
+    Double distance;
     Unit firstUnit = null;
     Unit secondUnit = null;
     Thread thredBattle;
@@ -19,14 +24,76 @@ public class Area
     {
         this.map = map;
         this.position = position;
-    }
-    public Area setUnit(Integer c)
-    {
-        //do poprawy
-        firstUnit = new Sword(map,new Player("player"),position,c);
-        return this;
+        randomUnit();
+        randomType();
+        setDistance();
     }
 
+    private void randomUnit()
+    {
+        Player player;
+        if(position.getValue() < 5 && position.getKey() < 5)
+            player = new Player("player");
+        else if(position.getValue() > 10 && position.getKey() > 10)
+            player = new Player("ai");
+        else
+            return;
+        Random random = new Random();
+        int i = random.nextInt();
+        i %= 10;
+        if(i == 0)
+            setUnit(player,Unit.Type.SWORDSMAN,100);
+        else if (i == 1)
+            setUnit(player,Unit.Type.SPEARMAN,100);
+        else if (i == 2)
+            setUnit(player,Unit.Type.CAVALRY,100);
+    }
+
+    private void randomType()
+    {
+        Random random = new Random();
+        int i = random.nextInt();
+        i %= 3;
+        if(i == 0)
+            type = Type.MEADOW;
+        else if (i == 1)
+            type = Type.HILL;
+        else
+            type = Type.MOUNTAIN;
+    }
+
+    private void setDistance()
+    {
+        if(type.equals(Type.MEADOW))
+            distance = 0.8;
+        else if(type.equals(Type.HILL))
+            distance = 1.0;
+        else if(type.equals(Type.MOUNTAIN))
+            distance = 1.2;
+    }
+
+    public Double getDistance()
+    {
+        return distance;
+    }
+
+    public Area setUnit(Player p,Unit.Type t,Integer c)
+    {
+        firstUnit = new Unit(map,p,position, t,c);
+
+        if(p.equals(new Player("ai")))
+            map.enemy.add(firstUnit);
+
+        return this;
+    }
+    public Type getType()
+    {
+        return type;
+    }
+    public Pair<Integer,Integer> getPosition()
+    {
+        return position;
+    }
     public Unit getFirstUnit()
     {
         return firstUnit;
@@ -46,18 +113,17 @@ public class Area
             }
             while (secondUnit != null)
             {
-                //pierwsza jednostka udarza pierwsza
                 if(secondUnit == null || firstUnit == null)
                     break;
                 synchronized (map)
                 {
-                    if( secondUnit.addDamage( firstUnit.countDamage() ) )
-                        secondUnit = null;
-                    else if( firstUnit.addDamage( secondUnit.countDamage() ) )
+                    if( firstUnit.addDamage( secondUnit.countDamage() ) )
                     {
                         firstUnit = secondUnit;
                         secondUnit = null;
                     }
+                    else if( secondUnit.addDamage( firstUnit.countDamage() ) )
+                        secondUnit = null;
                 }
                 try
                 {
